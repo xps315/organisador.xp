@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ArchiveX · Organizadora de PDFs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <link rel="stylesheet" href="Styles.css">
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div id="login-screen">
+  <div class="login-bg-shapes">
+    <div class="shape shape-1"></div>
+    <div class="shape shape-2"></div>
+    <div class="shape shape-3"></div>
+  </div>
+  <div class="login-box">
+    <div class="login-brand">
+      <div class="login-logo">
+        <svg viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="14" width="34" height="24" rx="4" fill="var(--accent)" opacity=".18" stroke="var(--accent)" stroke-width="2"/>
+          <path d="M4 14l4-8h26l4 8" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+          <rect x="4" y="14" width="34" height="5" rx="0" fill="var(--accent)" opacity=".15"/>
+          <path d="M15 28h12M21 22v12" stroke="var(--primary)" stroke-width="2.2" stroke-linecap="round"/>
+          <circle cx="34" cy="10" r="3" fill="var(--accent)" opacity=".5"/>
+        </svg>
+      </div>
+      <h1>ArchiveX</h1>
+      <p>Organizadora de PDFs · Acceso seguro</p>
+    </div>
+
+    <div class="field-group">
+      <label>Usuario</label>
+      <input type="text" id="login-user" placeholder="tu usuario" autocomplete="username">
+    </div>
+    <div class="field-group">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+
+    <button class="btn-login" onclick="doLogin()">
+      <i class="ti ti-login" style="font-size:16px;vertical-align:-2px;margin-right:4px"></i>
+      Entrar
+    </button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div id="app">
+  <!-- Hamburger para móvil -->
+  <button class="hamburger" id="hamburger" onclick="toggleSidebar()" aria-label="Menú">
+    <i class="ti ti-menu-2"></i>
+  </button>
+  <!-- Overlay sidebar móvil -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="4" y="14" width="34" height="24" rx="4" fill="rgba(255,255,255,0.25)" stroke="rgba(255,255,255,0.7)" stroke-width="2"/>
+          <path d="M4 14l4-8h26l4 8" stroke="rgba(255,255,255,0.8)" stroke-width="2" stroke-linejoin="round"/>
+          <rect x="4" y="14" width="34" height="5" fill="rgba(255,255,255,0.12)"/>
+          <path d="M15 28h12M21 22v12" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <h2>ArchiveX</h2>
+        <span>Organizador PDF</span>
+      </div>
+    </div>
+
+    <div class="nav-section-title">Principal</div>
+
+    <div class="nav-item active" onclick="goPage('page-organizer', event)">
+      <i class="ti ti-folders"></i>
+      Organizar PDFs
+    </div>
+
+    <div class="nav-item" onclick="goPage('page-inventory', event)">
+      <i class="ti ti-clipboard-list"></i>
+      Inventario
+    </div>
+
+    <div class="nav-item nav-admin" onclick="goPage('page-users', event)" style="display:none">
+      <i class="ti ti-users"></i>
+      Usuarios
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-badge">
+        <div class="user-avatar" id="sidebar-avatar">D</div>
+        <div class="user-info">
+          <div class="user-info-name" id="sidebar-name">Usuario</div>
+          <div class="user-info-role" id="sidebar-role">usuario</div>
+        </div>
+        <button class="btn-logout" onclick="doLogout()" title="Cerrar sesión">
+          <i class="ti ti-logout" style="font-size:16px"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- ═══ PAGE: ORGANIZER ═══ -->
+    <div class="page active" id="page-organizer">
+      <div class="page-header">
+        <h1>Organizar PDFs</h1>
+        <p>Sube un archivo ZIP y cada PDF quedará en su propia carpeta</p>
+      </div>
+
+      <div class="stats-row" id="organizer-stats">
+        <div class="stat-card">
+          <div class="stat-label">Operaciones totales</div>
+          <div class="stat-val" id="stat-total">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">PDFs organizados</div>
+          <div class="stat-val" id="stat-pdfs">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Hoy</div>
+          <div class="stat-val" id="stat-hoy">—</div>
+        </div>
+      </div>
+
+      <!-- Drop zone -->
+      <div class="card" id="drop-card">
+        <div id="zona-drop" onclick="document.getElementById('zinput').click()">
+          <div class="drop-icon">
+            <svg width="40" height="40" viewBox="0 0 42 42" fill="none">
+              <rect x="4" y="14" width="34" height="24" rx="4" fill="var(--accent-light)" stroke="var(--accent)" stroke-width="1.8"/>
+              <path d="M4 14l4-8h26l4 8" stroke="var(--accent)" stroke-width="1.8" stroke-linejoin="round"/>
+              <text x="21" y="31" text-anchor="middle" font-size="7" font-weight="800" fill="var(--primary)" font-family="sans-serif">ZIP</text>
+              <circle cx="32" cy="32" r="9" fill="var(--accent)"/>
+              <path d="M32 27v10M27 32l5 5 5-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h3>Arrastra tu archivo ZIP aquí</h3>
+          <p>o haz clic para buscarlo en tu computadora</p>
+        </div>
+        <input type="file" id="zinput" accept=".zip" style="display:none">
+        <div id="drop-error" style="display:none; color:var(--error); font-size:13px; text-align:center; margin-top:10px;">
+          El archivo no es un ZIP válido.
+        </div>
+      </div>
+
+      <!-- Process view -->
+      <div class="card" id="process-card" style="display:none; margin-top:1.25rem;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:1rem;">
+          <i class="ti ti-file-zip" style="font-size:20px; color:var(--accent)"></i>
+          <span style="font-weight:600; color:var(--plum);" id="zip-name-label">archivo.zip</span>
+        </div>
+
+        <div class="pdf-list" id="pdf-list"></div>
+        <div class="proc-stats" id="proc-stats"></div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-generar" onclick="generarZip()">
+            <i class="ti ti-download" style="font-size:16px"></i>
+            Generar ZIP organizado
+          </button>
+          <button class="btn btn-ghost" onclick="reiniciarOrganizer()">
+            <i class="ti ti-refresh" style="font-size:15px"></i>
+            Usar otro ZIP
+          </button>
+        </div>
+
+        <div class="progress-wrap" id="progress-wrap">
+          <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill"></div></div>
+          <p class="progress-msg" id="progress-msg">Procesando...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: INVENTORY ═══ -->
+    <div class="page" id="page-inventory">
+      <div class="page-header">
+        <h1>Inventario de Actividad</h1>
+        <p>Registro completo de todas las operaciones realizadas</p>
+      </div>
+
+      <div class="card">
+        <div class="section-header">
+          <h2>Historial</h2>
+          <button class="btn btn-ghost btn-sm" onclick="cargarInventario()">
+            <i class="ti ti-refresh" style="font-size:13px"></i>
+            Actualizar
+          </button>
+        </div>
+
+        <div class="search-bar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="inv-search" placeholder="Buscar por archivo, usuario..." oninput="filtrarInventario()">
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Archivo ZIP</th>
+                <th>PDFs</th>
+                <th>Carpetas</th>
+                <th>Tamaño</th>
+                <th>Usuario</th>
+                <th>Fecha</th>
+                <th>Hora</th>
+              </tr>
+            </thead>
+            <tbody id="inv-tbody">
+              <tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-soft);">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE: USERS ═══ -->
+    <div class="page" id="page-users">
+      <div class="page-header">
+        <h1>Gestión de Usuarios</h1>
+        <p>Administra las cuentas del sistema</p>
+      </div>
+
+      <div class="card">
+        <div class="section-header">
+          <h2>Cuentas registradas</h2>
+          <button class="btn btn-primary btn-sm" onclick="abrirModalUsuario()">
+            <i class="ti ti-user-plus" style="font-size:13px"></i>
+            Nuevo usuario
+          </button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Nombre</th>
+                <th>Rol</th>
+                <th>Género</th>
+                <th>Estado</th>
+                <th>Creada</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody">
+              <tr><td colspan="7" style="text-align:center; padding:2rem; color:var(--text-soft);">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── MODAL USUARIO ── -->
+<div class="modal-overlay" id="modal-usuario">
+  <div class="modal">
+    <button class="modal-close" onclick="cerrarModal()">✕</button>
+    <h2 class="modal-title" id="modal-titulo">Nuevo usuario</h2>
+
+    <!-- Selector de género en el modal -->
+    <div class="form-row">
+      <label>Tema / Género</label>
+      <div class="gender-selector-modal">
+        <button class="gender-btn-modal active" id="mbg-female" onclick="selectModalGender('female')">
+          <i class="ti ti-gender-female"></i>
+          <span>Femenino</span>
+        </button>
+        <button class="gender-btn-modal" id="mbg-male" onclick="selectModalGender('male')">
+          <i class="ti ti-gender-male"></i>
+          <span>Masculino</span>
+        </button>
+        <button class="gender-btn-modal" id="mbg-admin" onclick="selectModalGender('admin')">
+          <i class="ti ti-shield-check"></i>
+          <span>Admin</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-row">
+        <label>Usuario</label>
+        <input type="text" id="mu-user" placeholder="nombre de usuario">
+      </div>
+      <div class="form-row">
+        <label>Nombre</label>
+        <input type="text" id="mu-nombre" placeholder="nombre completo">
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-row">
+        <label>Contraseña</label>
+        <input type="password" id="mu-pass" placeholder="contraseña">
+      </div>
+      <div class="form-row">
+        <label>Rol</label>
+        <select id="mu-rol" onchange="syncRolGenero()">
+          <option value="usuario">Usuaria</option>
+          <option value="admin">Administradora</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="modal-error" style="display:none; color:var(--error); font-size:13px; margin-bottom:10px; background:var(--error-bg); padding:8px 12px; border-radius:8px;"></div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="guardarUsuario()" style="flex:1;">
+        <i class="ti ti-device-floppy" style="font-size:15px"></i>
+        Guardar
+      </button>
+      <button class="btn btn-ghost" onclick="cerrarModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script src="Script.js"></script>
+</body>
+</html>
